@@ -8,21 +8,14 @@ import { studentRepository } from "../../../infrastructure/repositories/index.ts
 const StudentSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  // Email is now optional for homeschoolers
-  email: z.string().email("Please enter a valid email address").optional(),
+  email: z.string().optional(),
   grade: z.string().min(1, "Please select a grade"),
-  // Guardian information is now optional
-  guardianName: z.string().min(2, "Guardian name must be at least 2 characters").optional(),
-  guardianEmail: z.string().email("Please enter a valid guardian email address").optional(),
-  guardianPhone: z.string().min(10, "Please enter a valid phone number").optional(),
   notes: z.string().optional(),
   pinEnabled: z.boolean().optional(),
   pin: z.string().optional()
     .refine(val => !val || val.length === 4, "PIN must be 4 digits")
-    .refine(val => !val || /^\d+$/.test(val), "PIN must contain only digits"),
+    .refine(val => !val || /^[0-9]+$/.test(val), "PIN must contain only digits"),
 });
-
-type StudentForm = z.infer<typeof StudentSchema>;
 
 // Define the grades for selection
 const grades = ["Pre-Kindergarten", "Kindergarten", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
@@ -32,6 +25,8 @@ interface NewStudentData {
   formValues?: Partial<StudentForm>;
   success?: boolean;
 }
+
+type StudentForm = z.infer<typeof StudentSchema>;
 
 export const handler: Handlers<NewStudentData> = {
   GET(_, ctx) {
@@ -43,9 +38,6 @@ export const handler: Handlers<NewStudentData> = {
         lastName: "",
         email: "",
         grade: "",
-        guardianName: "",
-        guardianEmail: "",
-        guardianPhone: "",
         notes: "",
         pinEnabled: false,
         pin: "",
@@ -61,9 +53,6 @@ export const handler: Handlers<NewStudentData> = {
     const lastName = formData.get("lastName")?.toString() || "";
     const email = formData.get("email")?.toString() || "";
     const grade = formData.get("grade")?.toString() || "";
-    const guardianName = formData.get("guardianName")?.toString() || "";
-    const guardianEmail = formData.get("guardianEmail")?.toString() || "";
-    const guardianPhone = formData.get("guardianPhone")?.toString() || "";
     const notes = formData.get("notes")?.toString() || "";
     const pinEnabled = formData.get("pinEnabled") === "on";
     const pin = formData.get("pin")?.toString() || "";
@@ -74,9 +63,6 @@ export const handler: Handlers<NewStudentData> = {
       lastName,
       email,
       grade,
-      guardianName,
-      guardianEmail,
-      guardianPhone,
       notes,
       pinEnabled,
       pin: pinEnabled ? pin : "",
@@ -101,8 +87,8 @@ export const handler: Handlers<NewStudentData> = {
     }
     
     try {
-      // Create a username from first name and last name (lowercase, no spaces)
-      const username = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/\s+/g, "");
+      // Create a username from first name and last name (lowercase, no spaces, and replace special characters)
+      const username = `${firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}.${lastName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
       
       // Create a student object
       const studentData = createStudent(
@@ -114,13 +100,13 @@ export const handler: Handlers<NewStudentData> = {
         {
           email: email || undefined,
           pin: pinEnabled ? pin : undefined,
-          guardianName: guardianName || undefined,
-          guardianEmail: guardianEmail || undefined,
-          guardianPhone: guardianPhone || undefined,
           notes: notes || undefined,
         }
       );
-      
+
+      // Ensure the name field is set
+      studentData.name = `${firstName} ${lastName}`;
+
       // Save the student to the repository
       await studentRepository.save(studentData);
       
@@ -140,78 +126,6 @@ export const handler: Handlers<NewStudentData> = {
     }
   },
 };
-
-// Guardian Information Form Component
-function GuardianInfoForm({ 
-  formValues, 
-  formErrors 
-}: { 
-  formValues: Partial<StudentForm>; 
-  formErrors: Record<string, string>; 
-}) {
-  return (
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <h2 class="text-xl font-bold text-gray-800 mb-4">Guardian Information (Optional)</h2>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label for="guardianName" class="block text-sm font-medium text-gray-700 mb-1">
-            Guardian Name
-          </label>
-          <input
-            type="text"
-            id="guardianName"
-            name="guardianName"
-            value={formValues.guardianName}
-            class={`w-full px-3 py-2 border rounded-md ${
-              formErrors.guardianName ? "border-red-500" : "border-gray-300"
-            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-          />
-          {formErrors.guardianName && (
-            <p class="mt-1 text-sm text-red-600">{formErrors.guardianName}</p>
-          )}
-        </div>
-        
-        <div>
-          <label for="guardianEmail" class="block text-sm font-medium text-gray-700 mb-1">
-            Guardian Email
-          </label>
-          <input
-            type="email"
-            id="guardianEmail"
-            name="guardianEmail"
-            value={formValues.guardianEmail}
-            class={`w-full px-3 py-2 border rounded-md ${
-              formErrors.guardianEmail ? "border-red-500" : "border-gray-300"
-            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-          />
-          {formErrors.guardianEmail && (
-            <p class="mt-1 text-sm text-red-600">{formErrors.guardianEmail}</p>
-          )}
-        </div>
-        
-        <div>
-          <label for="guardianPhone" class="block text-sm font-medium text-gray-700 mb-1">
-            Guardian Phone
-          </label>
-          <input
-            type="tel"
-            id="guardianPhone"
-            name="guardianPhone"
-            value={formValues.guardianPhone}
-            placeholder="(123) 456-7890"
-            class={`w-full px-3 py-2 border rounded-md ${
-              formErrors.guardianPhone ? "border-red-500" : "border-gray-300"
-            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-          />
-          {formErrors.guardianPhone && (
-            <p class="mt-1 text-sm text-red-600">{formErrors.guardianPhone}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function NewStudent({ data }: PageProps<NewStudentData>) {
   const { formErrors = {}, formValues = {} } = data;
@@ -318,9 +232,6 @@ export default function NewStudent({ data }: PageProps<NewStudentData>) {
             </div>
           </div>
         </div>
-        
-        {/* Use the GuardianInfoForm component */}
-        <GuardianInfoForm formValues={formValues} formErrors={formErrors} />
         
         <div class="bg-white rounded-lg shadow-md p-6">
           <h2 class="text-xl font-bold text-gray-800 mb-4">Additional Information</h2>

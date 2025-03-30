@@ -5,38 +5,21 @@ export const StudentSchema = z.object({
   id: z.string().uuid(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  name: z.string().min(1, "Name is required").transform((val, ctx) => {
-    const firstName = ctx.parent?.firstName;
-    const lastName = ctx.parent?.lastName;
-    if (!firstName || !lastName) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "First name and last name are required to generate name",
-      });
-      return z.NEVER;
-    }
-    return `${firstName} ${lastName}`;
-  }),
-  username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+  name: z.string().min(1, "Name is required"),
+  username: z.string()
+    .min(3, "Username must be at least 3 characters")
+    .regex(/^[a-zA-Z0-9_.]+$/, "Username can only contain letters, numbers, underscores, and periods"),
   grade: z.string().min(1, "Grade is required"),
-  avatarId: z.string().uuid(),
+  avatarId: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  email: z.string().email().optional(),
-  pin: z.string().optional(),
-  guardianName: z.string().optional(),
-  guardianEmail: z.string().email().optional(),
-  guardianPhone: z.string().optional(),
-  notes: z.string().optional(),
-  assignmentsCompleted: z.number().optional(),
-  averageScore: z.number().optional(),
-  lastActive: z.date().optional(),
-}).transform(data => ({
-  ...data,
-  assignmentsCompleted: data.assignmentsCompleted || 0,
-  averageScore: data.averageScore || 0,
-  lastActive: data.lastActive || new Date(),
-}));
+  email: z.string().email().optional().nullable(),
+  pin: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  assignmentsCompleted: z.number().default(0),
+  averageScore: z.number().default(0),
+  lastActive: z.date().default(() => new Date()),
+});
 
 // Student type definition derived from the schema
 export type Student = z.infer<typeof StudentSchema>;
@@ -51,13 +34,10 @@ export function createStudent(
   options: {
     email?: string;
     pin?: string;
-    guardianName?: string;
-    guardianEmail?: string;
-    guardianPhone?: string;
     notes?: string;
   } = {},
 ): Omit<Student, "id" | "createdAt" | "updatedAt"> {
-  const { email, pin, guardianName, guardianEmail, guardianPhone, notes } = options;
+  const { email, pin, notes } = options;
   const name = `${firstName} ${lastName}`;
   
   return {
@@ -67,11 +47,11 @@ export function createStudent(
     username,
     grade,
     avatarId,
-    ...(email && { email }),
-    ...(pin && { pin }),
-    ...(guardianName && { guardianName }),
-    ...(guardianEmail && { guardianEmail }),
-    ...(guardianPhone && { guardianPhone }),
-    ...(notes && { notes }),
+    email: email || null,
+    pin: pin || null,
+    notes: notes || null,
+    assignmentsCompleted: 0,
+    averageScore: 0,
+    lastActive: new Date(),
   };
 }

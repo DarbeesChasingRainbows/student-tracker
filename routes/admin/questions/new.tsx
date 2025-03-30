@@ -4,7 +4,7 @@ import { z } from "zod";
 import { DifficultyLevel } from "../../../domain/models/Assignment.ts";
 import { QuestionType, createQuestion } from "../../../domain/models/Question.ts";
 import { RepositoryFactory } from "../../../infrastructure/repositories/RepositoryFactory.ts";
-
+import QuestionCreationForm from "../../../islands/QuestionCreationForm.tsx";
 // Admin UUID for question creation
 const ADMIN_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -181,7 +181,60 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
         <title>Create New Question</title>
       </Head>
       
-      <div class="mb-8">
+      <QuestionCreationForm onSubmit={async (questionData) => {
+        try {
+          // Create the question using the repository
+          const questionRepository = RepositoryFactory.createQuestionRepository();
+          
+          // Create question entity from form data
+          const question = {
+            prompt: questionData.prompt,
+            type: questionData.type,
+            difficultyLevel: questionData.difficultyLevel,
+            createdBy: ADMIN_UUID,
+            tags: questionData.tags,
+            explanation: "",
+            // Add type-specific properties
+            ...(questionData.type === QuestionType.MULTIPLE_CHOICE && {
+              options: questionData.options.map(opt => ({
+                id: crypto.randomUUID(),
+                text: opt.text,
+                isCorrect: opt.isCorrect
+              }))
+            }),
+            ...(questionData.type === QuestionType.TRUE_FALSE && {
+              correctAnswer: questionData.correctAnswer === 'true'
+            }),
+            ...(questionData.type === QuestionType.SHORT_ANSWER && {
+              correctAnswers: [questionData.correctAnswer],
+              caseSensitive: false
+            })
+          };
+          
+          // Save the question
+          await questionRepository.save(question);
+          
+          // Redirect to questions list with success message
+          globalThis.location.href = "/admin/questions?success=created";
+        } catch (error: unknown) {
+          console.error("Error creating question:", error);
+          alert("An error occurred while creating the question. Please try again.");
+        }
+      }}
+      initialData={{
+        prompt: formValues.text || '',
+        type: formValues.type || QuestionType.MULTIPLE_CHOICE,
+        difficultyLevel: formValues.difficultyLevel || DifficultyLevel.MEDIUM,
+        options: [],
+        correctAnswer: formValues.correctAnswer || '',
+        tags: formValues.tags ? formValues.tags.split(',').map(tag => tag.trim()) : [],
+        mediaUrl: '',
+        mediaType: '',
+        pointValue: 1
+      }}
+      />
+
+      {/* <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800">Create New Question</h1>
         <p class="text-gray-600">Add a new question to the question bank</p>
       </div>
@@ -201,7 +254,6 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
       <form method="POST" class="space-y-6">
         <div class="bg-white rounded-lg shadow-md p-6">
           <div class="space-y-4">
-            {/* Question text */}
             <div>
               <label for="text" class="block text-sm font-medium text-gray-700 mb-1">
                 Question Text <span class="text-red-500">*</span>
@@ -221,7 +273,6 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
               )}
             </div>
             
-            {/* Question type */}
             <div>
               <label for="type" class="block text-sm font-medium text-gray-700 mb-1">
                 Question Type <span class="text-red-500">*</span>
@@ -247,7 +298,6 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
               )}
             </div>
             
-            {/* Difficulty level */}
             <div>
               <label for="difficultyLevel" class="block text-sm font-medium text-gray-700 mb-1">
                 Difficulty Level <span class="text-red-500">*</span>
@@ -271,7 +321,6 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
               )}
             </div>
             
-            {/* Tags */}
             <div>
               <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">
                 Tags <span class="text-red-500">*</span>
@@ -291,8 +340,7 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
                 <p class="mt-1 text-sm text-red-600">{formErrors.tags}</p>
               )}
             </div>
-            
-            {/* Multiple choice options */}
+          
             {showOptions && (
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-3">
@@ -332,7 +380,6 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
               </div>
             )}
             
-            {/* True/False answer */}
             {showTrueFalse && (
               <div>
                 <label for="correctAnswer" class="block text-sm font-medium text-gray-700 mb-1">
@@ -357,7 +404,6 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
               </div>
             )}
             
-            {/* Other question types correct answer */}
             {showCorrectAnswer && (
               <div>
                 <label for="correctAnswer" class="block text-sm font-medium text-gray-700 mb-1">
@@ -379,7 +425,7 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
               </div>
             )}
           </div>
-        </div>
+        </div> */}
         
         <div class="flex justify-end space-x-3">
           <a
@@ -395,7 +441,7 @@ export default function NewQuestion({ data }: PageProps<NewQuestionData>) {
             Create Question
           </button>
         </div>
-      </form>
+      
     </div>
   );
 }

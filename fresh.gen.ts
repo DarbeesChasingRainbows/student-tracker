@@ -30,6 +30,7 @@ import * as $student_select_avatar from "./routes/student/select-avatar.tsx";
 import * as $AvatarImage from "./islands/AvatarImage.tsx";
 import * as $Counter from "./islands/Counter.tsx";
 import * as $PracticeButtons from "./islands/PracticeButtons.tsx";
+import * as $QuestionCreationForm from "./islands/QuestionCreationForm.tsx";
 import * as $QuestionList from "./islands/QuestionList.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
@@ -66,6 +67,7 @@ const manifest = {
     "./islands/AvatarImage.tsx": $AvatarImage,
     "./islands/Counter.tsx": $Counter,
     "./islands/PracticeButtons.tsx": $PracticeButtons,
+    "./islands/QuestionCreationForm.tsx": $QuestionCreationForm,
     "./islands/QuestionList.tsx": $QuestionList,
   },
   baseUrl: import.meta.url,
